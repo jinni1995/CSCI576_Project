@@ -24,11 +24,19 @@ is already installed on your system.
 
 Note - to deactivate, simply type `deativate`
 
-4.  Install the required python modules with the command `pip3 install -r requirements.txt`
+4.  Install the required python modules with the command `pip3 install -r requirements.txt`.
+
+5.  Install the required dependencies that cannot be installed with pip. These requirements
+    can be found in the file `non-pip-requirements.txt`. Installing these will vary depending
+    on your system. With MacOS, the best way to install these is through HomeBrew. To do so,
+    run `cat non-pip-requirements | xargs brew install`. However, this will definitely change
+    depending on your system!
 
 ## Running
 
 To run this project, ensure that `my_program.py` is executable. On MacOS, this is
 done by running `chmod +x my_program.py`.
+
+Next, create an `ouput` folder. On MacOS, this is done by running `mkdir output`.
 
 After that, simply run the `my_program.py` script. On MacOS, this is done by running `./my_program.py`.
