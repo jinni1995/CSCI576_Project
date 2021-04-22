@@ -1,2 +1,10 @@
 .DS_Store
 .idea/
+.vscode/
+venv
+*.zip
+*.crdownload
+input
+__pycache__
+project_dataset
+output

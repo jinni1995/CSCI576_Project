@@ -1,0 +1,9 @@
+ffmpeg-python
+imutils
+librosa
+matplotlib
+numpy
+opencv-python
+scenedetect
+scipy
+wavio
