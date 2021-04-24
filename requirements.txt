@@ -7,3 +7,4 @@ opencv-python
 scenedetect
 scipy
 wavio
+blockmatching
