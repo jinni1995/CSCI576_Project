@@ -10,17 +10,17 @@ class MotionDetector:
         self._frames = frames
         self._kernel = kernel
         self._frames_processed = 0
-        self.event_list = []
+        self._event_list = []
         self._video_fps = 30
         self._min_event_len = FrameTimecode(2, self._video_fps)
         self._pre_event_len = FrameTimecode("3.5s", self._video_fps)
         self._post_event_len = FrameTimecode("5s", self._video_fps)
 
     def _post_scan_motion(self):
-        if not len(self.event_list) > 0:
+        if not len(self._event_list) > 0:
             return
 
-        if self.event_list:
+        if self._event_list:
             output_strs = [
                 "-------------------------------------------------------------",
                 "|   Event #    |  Start Time  |   Duration   |   End Time   |",
@@ -28,13 +28,13 @@ class MotionDetector:
             output_strs += ["|  Event %4d  |  %s  |  %s  |  %s  |" % (
                 event_num + 1, event_start.get_timecode(precision=3), event_duration.get_timecode(precision=3),
                 event_end.get_timecode(precision=3)) for event_num, (event_start, event_end, event_duration) in
-                            enumerate(self.event_list)]
+                            enumerate(self._event_list)]
             output_strs += [
                 "-------------------------------------------------------------"]
             print("Scan-only mode specified, list of motion events:\n%s" + '\n'.join(output_strs))
 
             timecode_list = []
-            for event_start, event_end, _ in self.event_list:
+            for event_start, event_end, _ in self._event_list:
                 timecode_list.append(event_start.get_timecode())
                 timecode_list.append(event_end.get_timecode())
             print("[DVR-Scan] Comma-separated timecode values:\n%s" % (
@@ -43,7 +43,7 @@ class MotionDetector:
     def scan_motion(self):
         bg_subtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
         event_window = []
-        self.event_list = []
+        self._event_list = []
         num_frames_post_event = 0
         event_start = None
         curr_pos = FrameTimecode(0, self._video_fps)
@@ -75,7 +75,7 @@ class MotionDetector:
                         in_motion_event = False
                         event_end = FrameTimecode(curr_pos.frame_num, self._video_fps)
                         event_duration = FrameTimecode(curr_pos.frame_num - event_start.frame_num, self._video_fps)
-                        self.event_list.append((event_start, event_end, event_duration))
+                        self._event_list.append((event_start, event_end, event_duration))
                         frame_nums_to_write.append((event_start.frame_num, event_end.frame_num))
             else:
                 if len(event_window) >= self._min_event_len.frame_num and all(
@@ -92,8 +92,8 @@ class MotionDetector:
             curr_pos.frame_num -= 1
             event_end = FrameTimecode(curr_pos.frame_num, self._video_fps)
             event_duration = FrameTimecode(curr_pos.frame_num - event_start.frame_num, self._video_fps)
-            self.event_list.append((event_start, event_end, event_duration))
+            self._event_list.append((event_start, event_end, event_duration))
             frame_nums_to_write.append((event_start.frame_num, event_end.frame_num))
 
-        self._post_scan_motion()
-        return self.event_list, frame_nums_to_write
+        # self._post_scan_motion()
+        return self._event_list, frame_nums_to_write

@@ -36,9 +36,9 @@ Note - to deactivate, simply type `deativate`
 
 ## Running
 
-To run this project, ensure that `my_program.py` is executable. On MacOS and Linux, this is
-done by running `chmod +x my_program.py`.
+To run this project, ensure that `main.py` is executable. On MacOS and Linux, this is
+done by running `chmod +x main.py`.
 
 Next, create an `ouput` folder. On MacOS and Linux, this is done by running `mkdir output`.
 
-After that, simply run the `my_program.py` script. On MacOS, this is done by running `./my_program.py`. On Linux, run `python3 my_program.py`.
+After that, simply run the `main.py` script. On MacOS, this is done by running `./main.py`. On Linux, run `python3 main.py`.

@@ -31,10 +31,6 @@ def detect_scenes(folder):
 
     frame_num = 0
     for filename in filenames:
-        # skip frames to make things faster
-        # if frame_num % 2 == 1:
-        #     frame_num += 1
-        #     continue
         with open(folder + filename, 'rb') as f:
             bytes = bytearray(f.read())
         bytes = np.array(bytes)
@@ -43,8 +39,6 @@ def detect_scenes(folder):
         images.append(frame_img)
         cuts = detector.process_frame(frame_num, frame_img)
         cutting_list += cuts
-        # if frame_num % 100 == 0:
-        #     print(frame_num)
         frame_num += 1
     cutting_list += detector.post_process(frame_num)
 
