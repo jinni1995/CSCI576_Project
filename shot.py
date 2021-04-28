@@ -15,14 +15,16 @@ class Shot:
         self.motion_score = None
         # average audio score of the entire shot
         self.audio_score = None
+        # average face detection score of the entire shot
+        self.face_detection_score = 0.
         # score of the entire shot based on some combination of the motion/audio/other scores
         self.shot_score = None
 
     def get_shot_score(self):
         assert self.motion_score is not None
         assert self.audio_score is not None
-        # TODO for now we only use motion score to rank the shots
-        return self.motion_score * self.audio_score
+        # TODO come up with a way of scoring the 3 metrics
+        return self.motion_score * self.audio_score + self.face_detection_score
 
     def get_motion_score(self):
         assert self.motion_scores is not None
@@ -56,4 +58,5 @@ class Shot:
             frame_nums.add(int(key.split('_')[0]))
             frame_nums.add(int(key.split('_')[1]))
 
+        print('here')
         return min(frame_nums), max(frame_nums)

@@ -8,3 +8,4 @@ scenedetect
 scipy
 wavio
 blockmatching
+face_recognition
