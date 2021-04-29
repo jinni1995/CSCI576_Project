@@ -1,3 +1,5 @@
+blockmatching
+face_recognition
 ffmpeg-python
 imutils
 matplotlib
@@ -5,6 +7,5 @@ numpy
 opencv-python
 scenedetect
 scipy
+tkinter
 wavio
-blockmatching
-face_recognition
