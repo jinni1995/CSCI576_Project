@@ -5,7 +5,7 @@ imutils
 matplotlib
 numpy
 opencv-python
+PyQt5
 scenedetect
 scipy
-tkinter
 wavio
