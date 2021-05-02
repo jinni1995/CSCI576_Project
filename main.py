@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-
-from video_converter import VideoConverter
-from wavio import Wav
-from EvaluatorWorker import EvaluatorWorker
 import os
 import sys
-from video_player import VideoPlayer
-from PyQt5.QtCore import QThreadPool, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QLabel, QProgressBar, QWidget, QFileDialog, QPushButton, QVBoxLayout, QGroupBox, QHBoxLayout
-from pynput.keyboard import Controller
-
 import time
+from typing import Tuple
+
+from PyQt5.QtCore import QThreadPool, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QLabel, QProgressBar, QWidget, QFileDialog, QPushButton, QVBoxLayout, \
+    QGroupBox, QHBoxLayout
+from pynput.keyboard import Controller
+from wavio import Wav
+
+from EvaluatorWorker import EvaluatorWorker
+from video_converter import VideoConverter
+from video_player import VideoPlayer
+
 
 class Gui(QWidget):
 
@@ -232,7 +235,7 @@ class Gui(QWidget):
         worker.signals.report_progress.connect(self.setProgress)
         self.threadpool.start(worker)
 
-    def setProgress(self: 'Gui', information: tuple[str, float]):
+    def setProgress(self: 'Gui', information: Tuple[str, float]):
         label = information[0]
         percentComplete = information[1]
         progress = max(min(100, round(100 * percentComplete)), 0)
@@ -246,7 +249,7 @@ class Gui(QWidget):
 
         self.evaluator_progress_bar.setValue(progress)
 
-    def evaluation_complete(self: 'Gui', information: tuple[list, Wav]):
+    def evaluation_complete(self: 'Gui', information: Tuple[list, Wav]):
         frame_nums_to_write = information[0]
         audio = information[1]
         self.frame_nums_to_write = frame_nums_to_write
@@ -273,7 +276,7 @@ class Gui(QWidget):
         if not self.playing_video:
             self.playing_video = True
             converter = VideoConverter(self.frame_nums_to_write, self.jpgFolder, self.audio.data, 30, \
-                self.audio.rate, self.audio.sampwidth)
+                                       self.audio.rate, self.audio.sampwidth)
             self.play_converted_video_button.setText('Pause')
             converter.play()
             self.play_converted_video_button.setText('Play Again')
@@ -286,6 +289,7 @@ class Gui(QWidget):
                 self.play_converted_video_button.setText('Play')
             else:
                 self.play_converted_video_button.setText('Pause')
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

@@ -1,13 +1,15 @@
 import time
 
-from wavio import Wav
 # from video_converter import VideoConverter
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
+
 from evaluator import Evaluator
+
 
 class Signals(QObject):
     finished_with_results = pyqtSignal(tuple)
     report_progress = pyqtSignal(tuple)
+
 
 class EvaluatorWorker(QRunnable):
 
@@ -23,25 +25,23 @@ class EvaluatorWorker(QRunnable):
         predicted_time = 5. * 60.
 
         start_time = time.time()
-        self.signals.report_progress.emit(('Starting video evaluation', 0))
-        evaluator = Evaluator(self.rgbFolder, self.wavFile)
+        self.signals.report_progress.emit(('Detecting and segmenting shots...', 0))
+        evaluator = Evaluator(self.rgbFolder, self.wavFile, self.signals)
         end_time = time.time()
         total_time += end_time - start_time
-        self.signals.report_progress.emit(('Detected and segmented shots in ' + str(end_time - start_time) + 's', total_time / predicted_time))
 
         start_time = time.time()
         evaluator.evaluate()
         end_time = time.time()
         total_time += end_time - start_time
-        self.signals.report_progress.emit(('Evaluated video in ' + str(end_time - start_time) + 's', total_time / predicted_time))
 
         start_time = time.time()
         frame_nums_to_write = evaluator.select_frames()
         end_time = time.time()
         total_time += end_time - start_time
-        self.signals.report_progress.emit(('Selected frames in ' + str(end_time - start_time) + 's', total_time / predicted_time))
 
-        self.signals.report_progress.emit(('Program ran for ' + str(total_time) + ' seconds/' + str(total_time / 60.) + ' mins', total_time / predicted_time))
+        self.signals.report_progress.emit(
+            ('Program ran for ' + str(round(total_time / 60., 2)) + ' mins', total_time / predicted_time))
 
         # TODO remove this once we have the video player ready
         # self.signals.report_progress.emit('Converting selected frames into video...', total_time / predicted_time)

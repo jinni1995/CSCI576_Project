@@ -2,7 +2,6 @@
 
 import os
 import re
-import sys
 import time
 from collections import OrderedDict
 
@@ -16,16 +15,15 @@ from scenedetect.detectors import ContentDetector
 from shot import Shot
 from video_converter import VideoConverter
 
-np.set_printoptions(threshold=sys.maxsize)
-
 
 class Evaluator:
-    def __init__(self, frame_path, audio_path):
+    def __init__(self, frame_path, audio_path, signals):
         self.rgb_folder = frame_path
         self.audio = wavio.read(audio_path)
         self.frames = None
         self.cutting_list = None
         self.shots = None
+        self.signals = signals
         # detect scenes and read frames
         self.detect_scenes()
         # segregate shots
@@ -49,8 +47,14 @@ class Evaluator:
             cuts = detector.process_frame(frame_num, frame_img)
             self.cutting_list += cuts
             frame_num += 1
+            if frame_num % 1000 == 0:
+                self.signals.report_progress.emit((
+                    'Detecting and segmenting shots... {frame_num}/16200 frames evaluated.'.format(
+                        frame_num=frame_num), frame_num / 16200))
         self.cutting_list += detector.post_process(frame_num)
         self.frames = self.frames
+        self.signals.report_progress.emit((
+            'Detecting and segmenting shots... 16200/16200 frames evaluated.', 1))
 
     def get_shots(self):
         shots = []
@@ -116,6 +120,12 @@ class Evaluator:
                 if faces:
                     shot.face_detected = True
                     break
+            if shot.num % 10 == 0:
+                print(shot.num)
+            if shot.num % 10 == 0:
+                self.signals.report_progress.emit((
+                    'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
+                        shot_num=shot.num, shots=len(self.shots)), shot.num / len(self.shots)))
 
         # normalize scores
         # motion_scores = np.array([shot.motion_score for shot in self.shots])
@@ -132,6 +142,9 @@ class Evaluator:
             # shot.motion_score = norm_motion_scores[shot.num]
             shot.audio_score = norm_audio_scores[shot.num]
             shot.get_shot_score()
+        self.signals.report_progress.emit((
+            'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
+                shot_num=len(self.shots), shots=len(self.shots)), 1))
 
     def get_motion_score_of_two_frames(self, meand):
         return sum(np.sqrt(np.square(meand[:, 0]) + np.square(meand[:, 1]))) / meand.shape[0]
