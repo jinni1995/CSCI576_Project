@@ -2,26 +2,8 @@ import cv2
 import pygame
 import os
 import time
-
-# class Pause(object):
-
-#     def __init__(self):
-#         self.paused = pygame.mixer.music.get_busy()
-
-#     def toggle(self):
-#         if self.paused:
-#             pygame.mixer.music.unpause()
-#         if not self.paused:
-#             pygame.mixer.music.pause()
-#         self.paused = not self.paused
-
-# Instantiate.
-
-# PAUSE = Pause()
-
-# Detect a key. Call toggle method.
-
-# PAUSE.toggle()
+import wavio
+import numpy as np
 
 class VideoPlayer:
     def __init__(self, video_input, audio_samples, fps):
@@ -32,27 +14,28 @@ class VideoPlayer:
         # fps
         self._fps = fps
 
-    # load all images from frames dir into an array
-    def load_images_from_folder(self, folder):
-        images = []
-        for filename in sorted(os.listdir(folder)):
-            img = cv2.imread(os.path.join(folder,filename))
-            if img is not None:
-                images.append(img)
-        self._frames = images
-        # return images
-
     # play audio and display frames with an interval
     def play(self):
 
-        # self.load_images_from_folder(self._video_input)
-        # self._frames.sort()
+        # self.construct_audio()
+        # self.get_file_names()
 
+        # pygame.mixer.pre_init(frequency=44100)
         pygame.init()
-        pygame.mixer.init()
-        pygame.mixer.music.load(self._audio_samples)
-        # play once
-        pygame.mixer.music.play(0)
+        
+        # display image
+        display_width = 320
+        display_height = 180
+
+        clock = pygame.time.Clock()
+        crashed = False
+        pause = False
+
+        gameDisplay = pygame.display.set_mode((display_width,display_height))
+        pygame.display.set_caption('video')
+
+        x = 0
+        y = 0
 
         folder = self._video_input
 
@@ -65,58 +48,70 @@ class VideoPlayer:
         fps_step = 5
         prev_fps_incr = False
 
+        pygame.mixer.init()
+        pygame.mixer.music.load(self._audio_samples)
+        # play once
+        pygame.mixer.music.play(0)
+
         start_time = time.time()
         while (os.path.exists(folder + filename + str(frame_num) + frame_format)):
-     
-            img = cv2.imread(folder + filename + str(frame_num) + frame_format)
-            cv2.imshow("Video", img)
 
-            # wait twice as long for every 100th frame to achieve 30 fps (33.33ms/frame), otherwise wait for 33ms
-            if frame_num % 100 != 0 :
-                key = cv2.waitKey(int(1 / float(play_fps) * 1000))    
-            else :
-                key = cv2.waitKey(int(2 / float(play_fps) * 1000))    
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_p:
+                        if pause:
+                            pause = False
+                            start_time += time.time() - start_pause
+                            if not pygame.mixer.music.get_busy():
+                                pygame.mixer.music.unpause()
+                        else:
+                            pause = True
+                            start_pause = time.time()
+                            if pygame.mixer.music.get_busy():
+                                pygame.mixer.music.pause()
 
-            end_time = time.time()
+            if not pause:
 
-            # pause key
-            if key == ord('p'):
-                # pause audio
-                if pygame.mixer.music.get_busy():
-                    pygame.mixer.music.pause()
+                img = pygame.image.load(folder + filename + str(frame_num) + frame_format)
+                gameDisplay.blit(img, (x, y))
 
-                start_pause = time.time()
-                # pause frame display until key pressed
-                cv2.waitKey(-1)
-                
-            # resume paused audio   
-            if not pygame.mixer.music.get_busy():
-                pygame.mixer.music.unpause()
-                start_time += time.time() - start_pause # account for paused time
+                pygame.display.update()
 
-            # change fps if too fast/slow
-            if frame_num % 100 != 0 :
-                
-                if end_time - start_time < 1 / 30.0 * frame_num:
+                # wait twice as long for every 100th frame to achieve 30 fps (33.33ms/frame), otherwise wait for 33ms
+                if frame_num % 100 != 0 :
+                    clock.tick(play_fps)    
+                else :
+                    clock.tick(play_fps / 2)
+
+
+
+                end_time = time.time()
+
+                # change fps if too fast/slow
+                if frame_num % 100 != 0 :
                     
-                    if prev_fps_incr:
-                        fps_step = 5
-                    else:
-                        fps_step = fps_step / 2
+                    if end_time - start_time < 1 / 30.0 * frame_num:
                         
-                    print("+ time is " + str(end_time - start_time) + " step is " + str(fps_step))
-                    play_fps -= fps_step
-                    prev_fps_incr = False
+                        if prev_fps_incr:
+                            fps_step = 5
+                        else:
+                            fps_step = fps_step / 2
+                            
+                        # print("+ time is " + str(end_time - start_time) + " step is " + str(fps_step))
+                        play_fps -= fps_step
+                        prev_fps_incr = False
 
-                elif end_time - start_time > 1 / 30.0 * frame_num:
-                    
-                    if not prev_fps_incr:
-                        fps_step = 5
-                    else:
-                        fps_step = fps_step / 2
+                    elif end_time - start_time > 1 / 30.0 * frame_num:
+                        
+                        if not prev_fps_incr:
+                            fps_step = 5
+                        else:
+                            fps_step = fps_step / 2
 
-                    print("- time is " + str(end_time - start_time) + " step is " + str(fps_step))
-                    play_fps += fps_step
-                    prev_fps_incr = True
+                        # print("- time is " + str(end_time - start_time) + " step is " + str(fps_step))
+                        play_fps += fps_step
+                        prev_fps_incr = True
 
-            frame_num += 1
+                frame_num += 1
+            
+        pygame.quit()
