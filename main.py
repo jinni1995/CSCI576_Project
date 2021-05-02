@@ -138,7 +138,7 @@ class Gui(QWidget):
         self.addVideoEvaluatorSection()
 
     def createPlayVideoButtons(self: 'Gui') -> QGroupBox:
-        groupBox = QGroupBox("Or Choose your JPG Folder and WAV File for Video Play")
+        groupBox = QGroupBox("Or choose your JPG Folder and WAV File for Video Play")
         groupBox.setFixedHeight(100)
         layout = QHBoxLayout()
 

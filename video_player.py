@@ -1,9 +1,8 @@
-import cv2
-import pygame
 import os
 import time
-import wavio
-import numpy as np
+
+import pygame
+
 
 class VideoPlayer:
     def __init__(self, video_input, audio_samples, fps):
@@ -22,7 +21,7 @@ class VideoPlayer:
 
         # pygame.mixer.pre_init(frequency=44100)
         pygame.init()
-        
+
         # display image
         display_width = 320
         display_height = 180
@@ -31,7 +30,7 @@ class VideoPlayer:
         crashed = False
         pause = False
 
-        gameDisplay = pygame.display.set_mode((display_width,display_height))
+        gameDisplay = pygame.display.set_mode((display_width, display_height))
         pygame.display.set_caption('video')
 
         x = 0
@@ -78,31 +77,29 @@ class VideoPlayer:
                 pygame.display.update()
 
                 # wait twice as long for every 100th frame to achieve 30 fps (33.33ms/frame), otherwise wait for 33ms
-                if frame_num % 100 != 0 :
-                    clock.tick(play_fps)    
-                else :
+                if frame_num % 100 != 0:
+                    clock.tick(play_fps)
+                else:
                     clock.tick(play_fps / 2)
-
-
 
                 end_time = time.time()
 
                 # change fps if too fast/slow
-                if frame_num % 100 != 0 :
-                    
+                if frame_num % 100 != 0:
+
                     if end_time - start_time < 1 / 30.0 * frame_num:
-                        
+
                         if prev_fps_incr:
                             fps_step = 5
                         else:
                             fps_step = fps_step / 2
-                            
+
                         # print("+ time is " + str(end_time - start_time) + " step is " + str(fps_step))
                         play_fps -= fps_step
                         prev_fps_incr = False
 
                     elif end_time - start_time > 1 / 30.0 * frame_num:
-                        
+
                         if not prev_fps_incr:
                             fps_step = 5
                         else:
@@ -113,5 +110,5 @@ class VideoPlayer:
                         prev_fps_incr = True
 
                 frame_num += 1
-            
+
         pygame.quit()

@@ -5,8 +5,9 @@ import time
 import cv2
 import ffmpeg
 import numpy as np
-import wavio
 import pygame
+import wavio
+
 
 class VideoConverter:
     def __init__(self, selections, video_input, audio_samples, fps, audio_rate, audio_sampwidth):
@@ -99,8 +100,8 @@ class VideoConverter:
         crashed = False
         pause = False
 
-        gameDisplay = pygame.display.set_mode((display_width,display_height))
-        pygame.display.set_caption('output video')
+        gameDisplay = pygame.display.set_mode((display_width, display_height))
+        pygame.display.set_caption('Summarized Video')
 
         x = 0
         y = 0
@@ -120,7 +121,6 @@ class VideoConverter:
         # while (os.path.exists(folder + filename + str(frame_num) + frame_format)):
 
         # image = pygame.image.load(folder + "frame0.jpg")
-        
 
         # for frame in self._selections:
         while frame_num < len(self._selections):
@@ -147,31 +147,29 @@ class VideoConverter:
                 pygame.display.update()
 
                 # wait twice as long for every 100th frame to achieve 30 fps (33.33ms/frame), otherwise wait for 33ms
-                if frame_num % 100 != 0 :
-                    clock.tick(play_fps)    
-                else :
+                if frame_num % 100 != 0:
+                    clock.tick(play_fps)
+                else:
                     clock.tick(play_fps / 2)
-
-
 
                 end_time = time.time()
 
                 # change fps if too fast/slow
-                if frame_num % 100 != 0 :
-                    
+                if frame_num % 100 != 0:
+
                     if end_time - start_time < 1 / 30.0 * frame_num:
-                        
+
                         if prev_fps_incr:
                             fps_step = 5
                         else:
                             fps_step = fps_step / 2
-                            
+
                         # print("+ time is " + str(end_time - start_time) + " step is " + str(fps_step))
                         play_fps -= fps_step
                         prev_fps_incr = False
 
                     elif end_time - start_time > 1 / 30.0 * frame_num:
-                        
+
                         if not prev_fps_incr:
                             fps_step = 5
                         else:
@@ -182,6 +180,5 @@ class VideoConverter:
                         prev_fps_incr = True
 
                 frame_num += 1
-
 
         pygame.quit()
