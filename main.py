@@ -1,196 +1,293 @@
 #!/usr/bin/env python3
 
-import os
-import re
-import sys
-import time
-from collections import OrderedDict
-
-import face_recognition
-import imutils
-import numpy as np
-import wavio
-from blockmatching import *
-from scenedetect.detectors import ContentDetector
-
-from shot import Shot
 from video_converter import VideoConverter
+from wavio import Wav
+from EvaluatorWorker import EvaluatorWorker
+import os
+import sys
+from video_player import VideoPlayer
+from PyQt5.QtCore import QThreadPool, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QLabel, QProgressBar, QWidget, QFileDialog, QPushButton, QVBoxLayout, QGroupBox, QHBoxLayout
+from pynput.keyboard import Controller
 
-np.set_printoptions(threshold=sys.maxsize)
+import time
 
+class Gui(QWidget):
 
-class Evaluator:
-    def __init__(self, frame_path, audio_path):
-        self.rgb_folder = frame_path
-        self.audio = wavio.read(audio_path)
-        self.frames = None
-        self.cutting_list = None
-        self.shots = None
-        # detect scenes and read frames
-        self.detect_scenes()
-        # segregate shots
-        self.get_shots()
+    def __init__(self: 'Gui'):
+        super().__init__()
+        self.title = 'CSCI 576 Final Project'
+        self.left = 0
+        self.top = 0
+        self.width = 1920
+        self.height = 1080
 
-    def detect_scenes(self):
-        filenames = os.listdir(self.rgb_folder)
-        filenames.sort(key=lambda x: int(re.sub('\D', '', x)))
-        detector = ContentDetector(threshold=30.0, min_scene_len=7)
-        self.cutting_list = []
-        self.frames = []
+        self.jpgFolder = None
+        self.rgbFolder = None
+        self.wavFile = None
 
-        frame_num = 0
-        for filename in filenames:
-            with open(self.rgb_folder + filename, 'rb') as f:
-                bytes = bytearray(f.read())
-            bytes = np.array(bytes)
-            frame_img = np.dstack([bytes[0:320 * 180], bytes[320 * 180: 320 * 180 * 2], bytes[320 * 180 * 2:]])
-            frame_img = frame_img.reshape(180, 320, 3)
-            self.frames.append(frame_img)
-            cuts = detector.process_frame(frame_num, frame_img)
-            self.cutting_list += cuts
-            frame_num += 1
-        self.cutting_list += detector.post_process(frame_num)
-        self.frames = self.frames
+        self.playJpgFolder = None
+        self.playWavFile = None
 
-    def get_shots(self):
-        shots = []
-        i = 0
-        s = 0
-        for frame in self.cutting_list:
-            shot = Shot(num=s, start=i, end=frame)
-            shots.append(shot)
-            s += 1
-            i = frame
-        if i < 16200:
-            shot = Shot(num=s, start=i, end=16200)
-            shots.append(shot)
-        self.shots = shots
+        self.threadpool = QThreadPool()
 
-    def evaluate(self):
-        # param for motion evaluation
-        alpha = .01
+        self.playing_video = False
+        self.video_paused = False
 
-        # param for audio evaluation
-        samples = self.audio.data
+        self.keyboard_emulator = Controller()
 
-        for shot in self.shots:
-            # get frames corresponding to the current shot
-            shot_frames = np.array(self.frames[shot.start: shot.end])
-            # evaluate motion
-            first_frame = True
-            background = None
-            old_frame = None
-            motion_scores = {}
-            for idx, frame in enumerate(shot_frames):
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame = imutils.resize(frame, width=160, height=90)
-                if first_frame:
-                    background = BackgroundSubtractor(alpha, frame)
-                    foreground = background.foreground(frame)
-                    old_frame = foreground.copy()
-                    first_frame = False
-                else:
-                    foreground = background.foreground(frame)
-                    XP, YP, XD, YD = block_matching(old_frame, foreground, 4, 4)
-                    U, V, object_tops, meand = clustering(XD, YD, XP, YP)
-                    old_frame = foreground.copy()
-                    if meand:
-                        motion_scores[
-                            str(shot.start + idx - 1) + '_' + str(
-                                shot.start + idx)] = self.get_motion_score_of_two_frames(
-                            np.array(meand))
-                    else:
-                        motion_scores[str(shot.start + idx - 1) + '_' + str(shot.start + idx)] = 0.
-            shot.motion_scores = motion_scores
-            shot.motion_score = shot.get_motion_score()
+        self.initUI()
 
-            # evaluate audio
-            shot_audio_samples = samples[shot.start * 1600:shot.end * 1600]
-            shot.audio_score = np.average(shot_audio_samples)
+    def initUI(self):
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
 
-            # evaluate faces
-            subsampled_frames = shot_frames[
-                np.random.choice(shot_frames.shape[0], int(shot_frames.shape[0] * .2), replace=False)]
-            for frame in subsampled_frames:
-                faces = face_recognition.face_locations(frame)
-                if faces:
-                    shot.face_detected = True
-                    break
+        # Evaluator Progress Bar
+        self.evaluator_progress_bar = self.createProgressBarPercent()
 
-        # normalize scores
-        # motion_scores = np.array([shot.motion_score for shot in self.shots])
-        # norm_motion_scores = motion_scores / np.linalg.norm(motion_scores)
-        audio_scores = np.array([shot.audio_score for shot in self.shots])
-        norm_audio_scores = audio_scores / np.linalg.norm(audio_scores)
+        # Box Layout
+        self.windowLayout = QVBoxLayout()
 
-        # # motion ranks first and is worth 150 points
-        # norm_motion_scores = norm_motion_scores * (150. / np.amax(np.abs(norm_motion_scores)))
-        # # audio ranks second and is worth 100 points
-        # norm_audio_scores = norm_audio_scores * (100. / np.amax(np.abs(norm_audio_scores)))
+        # Options are to choose folders for video evaluation or play existing video
+        self.video_evaulation_widget = self.createChooseButtons()
+        self.play_video_widget = self.createPlayVideoButtons()
 
-        for shot in self.shots:
-            # shot.motion_score = norm_motion_scores[shot.num]
-            shot.audio_score = norm_audio_scores[shot.num]
-            shot.get_shot_score()
+        # Add Choose buttons
+        self.windowLayout.addWidget(self.video_evaulation_widget)
+        self.windowLayout.addWidget(self.play_video_widget)
 
-    def get_motion_score_of_two_frames(self, meand):
-        return sum(np.sqrt(np.square(meand[:, 0]) + np.square(meand[:, 1]))) / meand.shape[0]
+        # Set layout and show
+        self.setLayout(self.windowLayout)
+        self.show()
 
-    def select_frames(self):
-        scores = [shot.shot_score for shot in self.shots]
-        shot_nums = [i for i in range(0, len(self.shots))]
-        shot_scores = dict(zip(shot_nums, scores))
-        sorted_shot_scores = OrderedDict(sorted(shot_scores.items(), key=lambda item: item[1], reverse=True))
-        fps = 30
-        # TODO tune this because we are getting summarized videos of >100 seconds long
-        # min of 84 seconds
-        seconds = 84
-        min_frames = fps * seconds
-        num_selected_frames = 0
-        frame_nums_to_write = []
-        frames = []
-        for k, v in sorted_shot_scores.items():
-            shot = self.shots[k]
-            start, end = shot.get_frames_with_highest_score()
-            if start is not None:
-                frame_nums_to_write.append((start, end))
-                num_selected_frames += (end - start)
-                frames.append(end - start)
-            if num_selected_frames >= min_frames:
-                break
-        frame_nums_to_write.sort(key=lambda x: x[0])
-        return frame_nums_to_write
+    def createVideoEvaluatorSection(self: 'Gui') -> QGroupBox:
+        groupBox = QGroupBox('Video Evaluator')
+        groupBox.setFixedHeight(125)
 
+        layout = QVBoxLayout()
+        self.evaluatorProgressLabel = QLabel('Press the button to evaluate the video')
+        layout.addWidget(self.createButton('Evaluate Video', self.evaulate_video))
+        layout.addWidget(self.evaluator_progress_bar)
+        layout.addWidget(self.evaluatorProgressLabel)
 
-if __name__ == "__main__":
-    video_name = 'soccer'
-    frames_rgb_folder = 'input/project_dataset/frames_rgb/{video_name}/'.format(video_name=video_name)
-    frames_jpg_folder = 'input/project_dataset/frames/{video_name}/'.format(video_name=video_name)
-    audio_file = 'input/project_dataset/audio/{video_name}.wav'.format(video_name=video_name)
-    total_time = 0.
+        groupBox.setLayout(layout)
 
-    start_time = time.time()
-    evaluator = Evaluator(frames_rgb_folder, audio_file)
-    end_time = time.time()
-    print('Detected and segmented shots in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
+        return groupBox
 
-    start_time = time.time()
-    evaluator.evaluate()
-    end_time = time.time()
-    print('Evaluated video in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
+    def addVideoEvaluatorSection(self: 'Gui'):
+        if self.jpgFolder is not None and self.rgbFolder is not None and self.wavFile is not None:
+            self.windowLayout.addWidget(self.createVideoEvaluatorSection())
 
-    start_time = time.time()
-    frame_nums_to_write = evaluator.select_frames()
-    end_time = time.time()
-    print('Selected frames in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
+            if self.play_video_widget is not None:
+                self.windowLayout.removeWidget(self.play_video_widget)
+                self.play_video_widget.deleteLater()
+                self.play_video_widget = None
 
-    print('Program ran for ' + str(total_time) + ' seconds/' + str(total_time / 60.) + ' mins')
+    def createProgressBarPercent(self: 'Gui') -> QProgressBar:
+        progress_bar = QProgressBar()
+        progress_bar.setMinimum(0)
+        progress_bar.setMaximum(100)
+        return progress_bar
 
-    # TODO remove this once we have the video player ready
-    print('Converting selected frames into video...')
-    converter = VideoConverter(frame_nums_to_write, frames_jpg_folder, evaluator.audio.data, 30, evaluator.audio.rate,
-                               evaluator.audio.sampwidth)
-    converter.convert()
+    def createChooseButtons(self: 'Gui') -> QGroupBox:
+        chooseButtonsGroupBox = QGroupBox("Choose your JPG, RGB, and WAV Files/Folders for video evaluation")
+        chooseButtonsGroupBox.setFixedHeight(100)
+        layout = QHBoxLayout()
+
+        jpgBox = QVBoxLayout()
+        self.jpgLabel = QLabel()
+        jpgBox.addWidget(self.createButton('Choose JPG Folder', self.setJpgFolder))
+        jpgBox.addWidget(self.jpgLabel)
+        layout.addLayout(jpgBox)
+
+        rgbBox = QVBoxLayout()
+        self.rgbLabel = QLabel()
+        rgbBox.addWidget(self.createButton('Choose RGB Folder', self.setRgbFolder))
+        rgbBox.addWidget(self.rgbLabel)
+        layout.addLayout(rgbBox)
+
+        wavBox = QVBoxLayout()
+        self.wavLabel = QLabel()
+        wavBox.addWidget(self.createButton('Choose WAV File', self.setWavFile))
+        wavBox.addWidget(self.wavLabel)
+        layout.addLayout(wavBox)
+
+        chooseButtonsGroupBox.setLayout(layout)
+
+        return chooseButtonsGroupBox
+
+    @pyqtSlot()
+    def setJpgFolder(self: 'Gui'):
+        self.jpgFolder = self.getFolderPathDialog('JPG Folder') + '/'
+        self.jpgLabel.setText('/'.join(self.jpgFolder.split('/')[-5:]))
+        self.addVideoEvaluatorSection()
+
+    @pyqtSlot()
+    def setRgbFolder(self: 'Gui'):
+        self.rgbFolder = self.getFolderPathDialog('RGB Folder') + '/'
+        self.rgbLabel.setText('/'.join(self.rgbFolder.split('/')[-5:]))
+        self.addVideoEvaluatorSection()
+
+    @pyqtSlot()
+    def setWavFile(self: 'Gui'):
+        self.wavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
+        self.wavLabel.setText('/'.join(self.wavFile.split('/')[-5:]))
+        self.addVideoEvaluatorSection()
+
+    def createPlayVideoButtons(self: 'Gui') -> QGroupBox:
+        groupBox = QGroupBox("Or Choose your JPG Folder and WAV File for Video Play")
+        groupBox.setFixedHeight(100)
+        layout = QHBoxLayout()
+
+        jpgBox = QVBoxLayout()
+        self.playJpgLabel = QLabel()
+        jpgBox.addWidget(self.createButton('Choose JPG Folder', self.setPlayJpgFolder))
+        jpgBox.addWidget(self.playJpgLabel)
+        layout.addLayout(jpgBox)
+
+        wavBox = QVBoxLayout()
+        self.playWavLabel = QLabel()
+        wavBox.addWidget(self.createButton('Choose WAV File', self.setPlayWavFile))
+        wavBox.addWidget(self.playWavLabel)
+        layout.addLayout(wavBox)
+
+        groupBox.setLayout(layout)
+
+        return groupBox
+
+    def createPlayVideoSection(self: 'Gui') -> QGroupBox:
+        groupBox = QGroupBox('Play Video')
+        groupBox.setFixedHeight(100)
+
+        layout = QVBoxLayout()
+        self.play_video_button = self.createButton('Play', self.play_video)
+        layout.addWidget(self.play_video_button)
+
+        groupBox.setLayout(layout)
+
+        return groupBox
+
+    def addPlayVideoSection(self: 'Gui'):
+        if self.playJpgFolder is not None and self.playWavFile is not None:
+            self.windowLayout.addWidget(self.createPlayVideoSection())
+
+            # Remove evaluator section
+            if self.video_evaulation_widget is not None:
+                self.windowLayout.removeWidget(self.video_evaulation_widget)
+                self.video_evaulation_widget.deleteLater()
+                self.video_evaulation_widget = None
+
+    @pyqtSlot()
+    def play_video(self: 'Gui'):
+        if not self.playing_video:
+            self.video_player = VideoPlayer(self.playJpgFolder, self.playWavFile, 30)
+            self.playing_video = True
+            self.play_video_button.setText('Pause')
+            self.video_player.play()
+            self.play_video_button.setText('Play Again')
+            self.playing_video = False
+        else:
+            self.keyboard_emulator.press('p')
+            self.keyboard_emulator.release('p')
+            self.video_paused = not self.video_paused
+            if self.video_paused:
+                self.play_video_button.setText('Play')
+            else:
+                self.play_video_button.setText('Pause')
+
+    @pyqtSlot()
+    def setPlayJpgFolder(self: 'Gui'):
+        self.playJpgFolder = self.getFolderPathDialog('JPG Folder') + '/'
+        self.playJpgLabel.setText('/'.join(self.playJpgFolder.split('/')[-5:]))
+        self.addPlayVideoSection()
+
+    @pyqtSlot()
+    def setPlayWavFile(self: 'Gui'):
+        self.playWavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
+        self.playWavLabel.setText('/'.join(self.playWavFile.split('/')[-5:]))
+        self.addPlayVideoSection()
+
+    def createButton(self: 'Gui', label: str, callback) -> QPushButton:
+        button = QPushButton(label, self)
+        button.clicked.connect(callback)
+        return button
+
+    def getFolderPathDialog(self: 'Gui', caption: str) -> str or None:
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        options |= QFileDialog.ShowDirsOnly
+        dirname = QFileDialog.getExistingDirectory(self, caption, directory=os.getcwd(), options=options)
+        return dirname
+
+    def getFilePathDialog(self: 'Gui', caption: str, filter: str) -> str or None:
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self, caption, directory=os.getcwd(), filter=filter, options=options)
+        return fileName
+
+    @pyqtSlot()
+    def evaulate_video(self: 'Gui'):
+        worker = EvaluatorWorker(self.rgbFolder, self.wavFile)
+        worker.signals.finished_with_results.connect(self.evaluation_complete)
+        worker.signals.report_progress.connect(self.setProgress)
+        self.threadpool.start(worker)
+
+    def setProgress(self: 'Gui', information: tuple[str, float]):
+        label = information[0]
+        percentComplete = information[1]
+        progress = max(min(100, round(100 * percentComplete)), 0)
+        print(label)
+        print(progress)
+
+        self.evaluatorProgressLabel.setText(label)
+
+        # Trying this to prevent obscure error
+        time.sleep(1)
+
+        self.evaluator_progress_bar.setValue(progress)
+
+    def evaluation_complete(self: 'Gui', information: tuple[list, Wav]):
+        frame_nums_to_write = information[0]
+        audio = information[1]
+        self.frame_nums_to_write = frame_nums_to_write
+        self.audio = audio
+        self.addPlayConvertedVideoSection()
+
+    def addPlayConvertedVideoSection(self: 'Gui') -> QGroupBox:
+        groupBox = QGroupBox('Play Converted Video')
+        groupBox.setFixedHeight(100)
+
+        layout = QVBoxLayout()
+        self.play_converted_video_button = self.createButton('Play', self.play_converted_video)
+        layout.addWidget(self.play_converted_video_button)
+
+        groupBox.setLayout(layout)
+
+        self.windowLayout.addWidget(groupBox)
+
+    def play_converted_video(self: 'Gui'):
+        self.converter.play()
+
+    @pyqtSlot()
+    def play_converted_video(self: 'Gui'):
+        if not self.playing_video:
+            self.playing_video = True
+            converter = VideoConverter(self.frame_nums_to_write, self.jpgFolder, self.audio.data, 30, \
+                self.audio.rate, self.audio.sampwidth)
+            self.play_converted_video_button.setText('Pause')
+            converter.play()
+            self.play_converted_video_button.setText('Play Again')
+            self.playing_video = False
+        else:
+            self.keyboard_emulator.press('p')
+            self.keyboard_emulator.release('p')
+            self.video_paused = not self.video_paused
+            if self.video_paused:
+                self.play_converted_video_button.setText('Play')
+            else:
+                self.play_converted_video_button.setText('Pause')
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = Gui()
+    sys.exit(app.exec_())

@@ -5,6 +5,8 @@ imutils
 matplotlib
 numpy
 opencv-python
+pygame
+pynput
 PyQt5
 scenedetect
 scipy
