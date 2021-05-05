@@ -38,5 +38,6 @@ class EvaluatorWorker(QRunnable):
         end_time = time.time()
         total_time += end_time - start_time
 
-        print('Program ran for {time_taken} mins'.format(time_taken=round(total_time / 60., 2)))
+        self.signals.report_progress.emit(
+            ('Program ran for {time_taken} mins'.format(time_taken=round(total_time / 60., 2)), 1))
         self.signals.finished_with_results.emit((frame_nums_to_write, evaluator.audio))
