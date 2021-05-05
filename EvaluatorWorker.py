@@ -1,6 +1,5 @@
 import time
 
-# from video_converter import VideoConverter
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
 from evaluator import Evaluator
@@ -22,7 +21,6 @@ class EvaluatorWorker(QRunnable):
     @pyqtSlot()
     def run(self: 'EvaluatorWorker'):
         total_time = 0.
-        predicted_time = 5. * 60.
 
         start_time = time.time()
         self.signals.report_progress.emit(('Detecting and segmenting shots...', 0))
@@ -40,15 +38,5 @@ class EvaluatorWorker(QRunnable):
         end_time = time.time()
         total_time += end_time - start_time
 
-        self.signals.report_progress.emit(
-            ('Program ran for ' + str(round(total_time / 60., 2)) + ' mins', total_time / predicted_time))
-
-        # TODO remove this once we have the video player ready
-        # self.signals.report_progress.emit('Converting selected frames into video...', total_time / predicted_time)
-        # self.gui.converter = VideoConverter(frame_nums_to_write, self.gui.jpgFolder, evaluator.audio.data, 30, \
-        #     evaluator.audio.rate, evaluator.audio.sampwidth)
-
-        # self.converter.convert()
-
-        self.signals.report_progress.emit(('Completed evaluating video', 1))
+        print('Program ran for {time_taken} mins'.format(time_taken=round(total_time / 60., 2)))
         self.signals.finished_with_results.emit((frame_nums_to_write, evaluator.audio))

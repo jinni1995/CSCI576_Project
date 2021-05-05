@@ -2,7 +2,6 @@
 
 import os
 import re
-import time
 from collections import OrderedDict
 
 import face_recognition
@@ -47,14 +46,12 @@ class Evaluator:
             cuts = detector.process_frame(frame_num, frame_img)
             self.cutting_list += cuts
             frame_num += 1
-            if frame_num % 1000 == 0:
+            if frame_num % 1000 == 0 and self.signals is not None:
                 self.signals.report_progress.emit((
                     'Detecting and segmenting shots... {frame_num}/16200 frames evaluated.'.format(
                         frame_num=frame_num), frame_num / 16200))
         self.cutting_list += detector.post_process(frame_num)
         self.frames = self.frames
-        self.signals.report_progress.emit((
-            'Detecting and segmenting shots... 16200/16200 frames evaluated.', 1))
 
     def get_shots(self):
         shots = []
@@ -120,9 +117,7 @@ class Evaluator:
                 if faces:
                     shot.face_detected = True
                     break
-            if shot.num % 10 == 0:
-                print(shot.num)
-            if shot.num % 10 == 0:
+            if shot.num % 10 == 0 and self.signals is not None:
                 self.signals.report_progress.emit((
                     'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
                         shot_num=shot.num, shots=len(self.shots)), shot.num / len(self.shots)))
@@ -142,9 +137,10 @@ class Evaluator:
             # shot.motion_score = norm_motion_scores[shot.num]
             shot.audio_score = norm_audio_scores[shot.num]
             shot.get_shot_score()
-        self.signals.report_progress.emit((
-            'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
-                shot_num=len(self.shots), shots=len(self.shots)), 1))
+        if self.signals is not None:
+            self.signals.report_progress.emit((
+                'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
+                    shot_num=len(self.shots), shots=len(self.shots)), 1))
 
     def get_motion_score_of_two_frames(self, meand):
         return sum(np.sqrt(np.square(meand[:, 0]) + np.square(meand[:, 1]))) / meand.shape[0]
@@ -180,30 +176,12 @@ if __name__ == "__main__":
     frames_rgb_folder = 'input/project_dataset/frames_rgb/{video_name}/'.format(video_name=video_name)
     frames_jpg_folder = 'input/project_dataset/frames/{video_name}/'.format(video_name=video_name)
     audio_file = 'input/project_dataset/audio/{video_name}.wav'.format(video_name=video_name)
-    total_time = 0.
 
-    start_time = time.time()
-    evaluator = Evaluator(frames_rgb_folder, audio_file)
-    end_time = time.time()
-    print('Detected and segmented shots in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
-
-    start_time = time.time()
+    evaluator = Evaluator(frames_rgb_folder, audio_file, None)
     evaluator.evaluate()
-    end_time = time.time()
-    print('Evaluated video in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
-
-    start_time = time.time()
     frame_nums_to_write = evaluator.select_frames()
-    end_time = time.time()
-    print('Selected frames in ' + str(end_time - start_time) + 's')
-    total_time += end_time - start_time
 
-    print('Program ran for ' + str(total_time) + ' seconds/' + str(total_time / 60.) + ' mins')
-
-    # TODO remove this once we have the video player ready
-    print('Converting selected frames into video...')
+    # offline run
     converter = VideoConverter(frame_nums_to_write, frames_jpg_folder, evaluator.audio.data, 30, evaluator.audio.rate,
                                evaluator.audio.sampwidth)
-    converter.convert()
+    converter.offline_conversion('./output_offline/{video_name}'.format(video_name=video_name))

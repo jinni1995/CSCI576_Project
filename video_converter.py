@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 import time
 
 import cv2
@@ -12,17 +13,17 @@ import wavio
 class VideoConverter:
     def __init__(self, selections, video_input, audio_samples, fps, audio_rate, audio_sampwidth):
         # selection of frames
-        self._selections = np.array([list(x) for x in selections])
+        self.selections = np.array([list(x) for x in selections])
         # folder containing jpg frames
-        self._video_input = video_input
+        self.video_input = video_input
         # audio samples where we can construct wav file
-        self._audio_samples = audio_samples
+        self.audio_samples = audio_samples
         # fps
-        self._fps = fps
+        self.fps = fps
         # audio sampling rate
-        self._audio_rate = audio_rate
+        self.audio_rate = audio_rate
         # sampling width of audio
-        self._audio_sampwidth = audio_sampwidth
+        self.audio_sampwidth = audio_sampwidth
 
     def clear_files(self):
         files = glob.glob('output/*')
@@ -31,41 +32,59 @@ class VideoConverter:
 
     def get_file_names(self):
         selections = []
-        for selection in self._selections:
+        for selection in self.selections:
             for i in range(selection[0], selection[1]):
                 selections.append('frame' + str(i) + '.jpg')
-        self._selections = selections
+        self.selections = selections
 
     def convert_video(self):
         frames = []
-        for filename in self._selections:
-            img = cv2.imread(self._video_input + filename)
+        for filename in self.selections:
+            img = cv2.imread(self.video_input + filename)
             height, width, layers = img.shape
             frames.append(img)
         out = cv2.VideoWriter('output/video.mp4',
-                              cv2.VideoWriter_fourcc(*'mp4v'), self._fps, (width, height))
+                              cv2.VideoWriter_fourcc(*'mp4v'), self.fps, (width, height))
         for frame in frames:
             out.write(frame)
         out.release()
 
-    def construct_audio(self):
-        total_frames = np.sum(np.subtract(self._selections[:, 1], self._selections[:, 0]))
+    def construct_audio(self, path=None):
+        total_frames = np.sum(np.subtract(self.selections[:, 1], self.selections[:, 0]))
         a = np.empty([total_frames * 1600, 2], dtype=np.int16)
         i = 0
-        for selection in self._selections:
+        for selection in self.selections:
             start = selection[0]
             end = selection[1]
-            audio_slice = self._audio_samples[start * 1600:end * 1600]
+            audio_slice = self.audio_samples[start * 1600:end * 1600]
             a[i:i + len(audio_slice)] = audio_slice
             i += len(audio_slice)
-        wavio.write("output/audio.wav", a,
-                    self._audio_rate, sampwidth=self._audio_sampwidth)
+        wavio.write("output/audio.wav" if path is None else path, a,
+                    self.audio_rate, sampwidth=self.audio_sampwidth)
 
     def merge_audio(self):
         video = ffmpeg.input('output/video.mp4')
         audio = ffmpeg.input('output/audio.wav')
         out = ffmpeg.output(video, audio, 'output/summarized_video.mp4')
         out.run()
+
+    def offline_conversion(self, folder_path):
+        jpg_folder_path = folder_path + '/frames/'
+        if not os.path.exists(folder_path):
+            os.mkdir(folder_path)
+            os.mkdir(jpg_folder_path)
+        else:
+            shutil.rmtree(folder_path, ignore_errors=True)
+            os.mkdir(folder_path)
+            os.mkdir(jpg_folder_path)
+        time.sleep(1)
+        # construct and convert the audio
+        self.construct_audio(folder_path + '/audio.wav')
+        # convert frame selections into file names
+        self.get_file_names()
+        # copy all selected frames into the frames folder
+        for filename in self.selections:
+            shutil.copy(self.video_input + filename, jpg_folder_path + filename)
 
     def convert(self):
         # delete all files in output folder
@@ -97,7 +116,6 @@ class VideoConverter:
         display_height = 180
 
         clock = pygame.time.Clock()
-        crashed = False
         pause = False
 
         gameDisplay = pygame.display.set_mode((display_width, display_height))
@@ -106,14 +124,14 @@ class VideoConverter:
         x = 0
         y = 0
 
-        folder = self._video_input
+        folder = self.video_input
 
         filename = "/frame"
         frame_num = 0
         frame_format = ".jpg"
 
         # control play speed
-        play_fps = self._fps
+        play_fps = self.fps
         fps_step = 5
         prev_fps_incr = False
 
@@ -123,7 +141,7 @@ class VideoConverter:
         # image = pygame.image.load(folder + "frame0.jpg")
 
         # for frame in self._selections:
-        while frame_num < len(self._selections):
+        while frame_num < len(self.selections):
 
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -140,8 +158,7 @@ class VideoConverter:
                                 pygame.mixer.music.pause()
 
             if not pause:
-
-                img = pygame.image.load(folder + self._selections[frame_num])
+                img = pygame.image.load(folder + self.selections[frame_num])
                 gameDisplay.blit(img, (x, y))
 
                 pygame.display.update()
