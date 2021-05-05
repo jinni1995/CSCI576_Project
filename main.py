@@ -134,7 +134,7 @@ class Gui(QWidget):
     @pyqtSlot()
     def setWavFile(self: 'Gui'):
         self.wavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
-        self.wavLabel.setText('/'.join(self.wavFile.split('/')[-5:]))
+        self.wavLabel.setText('/'.join(self.wavFile.split('/')[-4:]))
         self.addVideoEvaluatorSection()
 
     def createPlayVideoButtons(self: 'Gui') -> QGroupBox:
@@ -201,13 +201,13 @@ class Gui(QWidget):
     @pyqtSlot()
     def setPlayJpgFolder(self: 'Gui'):
         self.playJpgFolder = self.getFolderPathDialog('JPG Folder') + '/'
-        self.playJpgLabel.setText('/'.join(self.playJpgFolder.split('/')[-5:]))
+        self.playJpgLabel.setText('/'.join(self.playJpgFolder.split('/')[-4:]))
         self.addPlayVideoSection()
 
     @pyqtSlot()
     def setPlayWavFile(self: 'Gui'):
         self.playWavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
-        self.playWavLabel.setText('/'.join(self.playWavFile.split('/')[-5:]))
+        self.playWavLabel.setText('/'.join(self.playWavFile.split('/')[-3:]))
         self.addPlayVideoSection()
 
     def createButton(self: 'Gui', label: str, callback) -> QPushButton:

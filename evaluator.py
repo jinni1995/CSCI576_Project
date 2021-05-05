@@ -172,7 +172,7 @@ class Evaluator:
 
 
 if __name__ == "__main__":
-    video_name = 'soccer'
+    video_name = 'meridian'
     frames_rgb_folder = 'input/project_dataset/frames_rgb/{video_name}/'.format(video_name=video_name)
     frames_jpg_folder = 'input/project_dataset/frames/{video_name}/'.format(video_name=video_name)
     audio_file = 'input/project_dataset/audio/{video_name}.wav'.format(video_name=video_name)

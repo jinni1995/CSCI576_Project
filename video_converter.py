@@ -77,7 +77,6 @@ class VideoConverter:
             shutil.rmtree(folder_path, ignore_errors=True)
             os.mkdir(folder_path)
             os.mkdir(jpg_folder_path)
-        time.sleep(1)
         # construct and convert the audio
         self.construct_audio(folder_path + '/audio.wav')
         # convert frame selections into file names
@@ -180,8 +179,6 @@ class VideoConverter:
                             fps_step = 5
                         else:
                             fps_step = fps_step / 2
-
-                        # print("+ time is " + str(end_time - start_time) + " step is " + str(fps_step))
                         play_fps -= fps_step
                         prev_fps_incr = False
 
@@ -191,8 +188,6 @@ class VideoConverter:
                             fps_step = 5
                         else:
                             fps_step = fps_step / 2
-
-                        # print("- time is " + str(end_time - start_time) + " step is " + str(fps_step))
                         play_fps += fps_step
                         prev_fps_incr = True
 
