@@ -16,10 +16,6 @@ class VideoPlayer:
 
     # play audio and display frames with an interval
     def play(self):
-
-        # self.construct_audio()
-        # self.get_file_names()
-
         # pygame.mixer.pre_init(frequency=44100)
         pygame.init()
 
@@ -28,7 +24,6 @@ class VideoPlayer:
         display_height = 180
 
         clock = pygame.time.Clock()
-        crashed = False
         pause = False
 
         gameDisplay = pygame.display.set_mode((display_width, display_height))

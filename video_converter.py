@@ -125,9 +125,7 @@ class VideoConverter:
 
         folder = self.video_input
 
-        filename = "/frame"
         frame_num = 0
-        frame_format = ".jpg"
 
         # control play speed
         play_fps = self.fps
@@ -135,11 +133,6 @@ class VideoConverter:
         prev_fps_incr = False
 
         start_time = time.time()
-        # while (os.path.exists(folder + filename + str(frame_num) + frame_format)):
-
-        # image = pygame.image.load(folder + "frame0.jpg")
-
-        # for frame in self._selections:
         while frame_num < len(self.selections):
 
             for event in pygame.event.get():
