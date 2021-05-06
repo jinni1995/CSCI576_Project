@@ -8,3 +8,4 @@ input
 __pycache__
 project_dataset
 output
+output_offline

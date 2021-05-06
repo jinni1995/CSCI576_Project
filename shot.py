@@ -15,16 +15,15 @@ class Shot:
         self.motion_score = None
         # average audio score of the entire shot
         self.audio_score = None
-        # average face detection score of the entire shot
-        self.face_detection_score = 0.
+        # is a face detected in this shot?
+        self.face_detected = False
         # score of the entire shot based on some combination of the motion/audio/other scores
         self.shot_score = None
 
-    def get_shot_score(self):
-        assert self.motion_score is not None
-        assert self.audio_score is not None
-        # TODO come up with a way of scoring the 3 metrics
-        return self.motion_score * self.audio_score + self.face_detection_score
+    def get_shot_score(self, avg_audio_score):
+        audio_boost = 1.5 if self.audio_score > avg_audio_score else 1.
+        face_detection_bonus = 1.2 if self.face_detected else 1.
+        self.shot_score = self.motion_score * audio_boost * face_detection_bonus
 
     def get_motion_score(self):
         assert self.motion_scores is not None
@@ -33,7 +32,7 @@ class Shot:
     def get_frames_with_highest_score(self):
         """
         Returns the start and end frame numbers of the highest scored frames in the shot
-        :return:
+        :return: (start_frame, end_frame)
         """
         assert self.shot_score is not None
 
@@ -44,19 +43,18 @@ class Shot:
         if self.end - self.start < 45:
             return None, None
 
-        # TODO we might want to tune this number later on. For now we use 300 frames, i.e. 10s is the maximum summarized shot length
+        # 10s is the maximum summarized shot length
         if self.end - self.start < 300:
             return self.start, self.end
 
-        # TODO how to do this when we bring other metrics into the picture?
         motion_scores_sorted = OrderedDict(sorted(self.motion_scores.items(), key=lambda item: item[1], reverse=True))
         frame_nums = set()
         for key, value in motion_scores_sorted.items():
-            # TODO we have to tune this depending on how many frames are returned
-            if value <= .6 * self.shot_score:
+            if frame_nums and max(frame_nums) - min(frame_nums) >= 270:
+                break
+            if value <= .3 * self.shot_score:
                 break
             frame_nums.add(int(key.split('_')[0]))
             frame_nums.add(int(key.split('_')[1]))
 
-        print('here')
         return min(frame_nums), max(frame_nums)
