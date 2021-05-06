@@ -1,3 +1,4 @@
+import datetime
 import glob
 import os
 import shutil
@@ -24,6 +25,9 @@ class VideoConverter:
         self.audio_rate = audio_rate
         # sampling width of audio
         self.audio_sampwidth = audio_sampwidth
+        # init font first because it takes 8 seconds
+        pygame.init()
+        self.font = pygame.font.SysFont('Sans', 18)
 
     def clear_files(self):
         files = glob.glob('output/*')
@@ -103,8 +107,6 @@ class VideoConverter:
         self.construct_audio()
         self.get_file_names()
 
-        # pygame.mixer.pre_init(frequency=44100)
-        pygame.init()
         pygame.mixer.init()
         pygame.mixer.music.load("output/audio.wav")
         # play once
@@ -134,6 +136,13 @@ class VideoConverter:
 
         start_time = time.time()
         resized = False
+        total_video_time = datetime.timedelta(seconds=len(self.selections) / 30.)
+        hours, remainder = divmod(total_video_time.total_seconds(), 3600)
+        total_minutes, total_seconds = divmod(remainder, 60)
+        total_seconds = '{total_seconds:02d}'.format(total_seconds=int(total_seconds))
+        total_minutes = '{total_minutes:02d}'.format(total_minutes=int(total_minutes))
+        minutes = 0
+        seconds = 0
         while frame_num < len(self.selections):
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -161,6 +170,23 @@ class VideoConverter:
                     img = pygame.transform.scale(img, (w, h))
                 else:
                     img = pygame.image.load(folder + self.selections[frame_num])
+                sprite = pygame.sprite.Sprite()
+                sprite.image = img
+                sprite.rect = img.get_rect()
+                if frame_num % 30 == 0 and frame_num > 0:
+                    seconds += 1
+                    if seconds == 60:
+                        seconds = 0
+                        minutes += 1
+                text = self.font.render(
+                    '{minutes:02d}:{seconds:02d}/{total_minutes}:{total_seconds}'.format(minutes=minutes,
+                                                                                         seconds=seconds,
+                                                                                         total_minutes=total_minutes,
+                                                                                         total_seconds=total_seconds),
+                    True, (255, 255, 0))
+                sprite.image.blit(text, sprite.rect)
+                group = pygame.sprite.Group()
+                group.add(sprite)
                 gameDisplay.blit(img, (x, y))
 
                 pygame.display.update()
