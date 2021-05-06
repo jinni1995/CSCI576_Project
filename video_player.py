@@ -26,7 +26,7 @@ class VideoPlayer:
         clock = pygame.time.Clock()
         pause = False
 
-        gameDisplay = pygame.display.set_mode((display_width, display_height))
+        gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
         pygame.display.set_caption('video')
 
         x = 0
@@ -49,6 +49,7 @@ class VideoPlayer:
 
         start_time = time.time()
         frame_num = 0
+        resized = False
         for filename in filenames:
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -63,9 +64,19 @@ class VideoPlayer:
                             start_pause = time.time()
                             if pygame.mixer.music.get_busy():
                                 pygame.mixer.music.pause()
+                elif event.type == pygame.VIDEORESIZE:
+                    w, h = pygame.display.get_surface().get_size()
+                    w = int(w / 16.) * 16
+                    h = int(w / 16 * 9)
+                    gameDisplay = pygame.display.set_mode((w, h), pygame.RESIZABLE)
+                    resized = True
 
             if not pause:
-                img = pygame.image.load(folder + filename)
+                if resized:
+                    img = pygame.image.load(folder + filename)
+                    img = pygame.transform.scale(img, (w, h))
+                else:
+                    img = pygame.image.load(folder + filename)
                 gameDisplay.blit(img, (x, y))
 
                 pygame.display.update()
