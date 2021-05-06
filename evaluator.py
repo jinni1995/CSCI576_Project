@@ -123,20 +123,13 @@ class Evaluator:
                         shot_num=shot.num, shots=len(self.shots)), shot.num / len(self.shots)))
 
         # normalize scores
-        # motion_scores = np.array([shot.motion_score for shot in self.shots])
-        # norm_motion_scores = motion_scores / np.linalg.norm(motion_scores)
         audio_scores = np.array([shot.audio_score for shot in self.shots])
         norm_audio_scores = audio_scores / np.linalg.norm(audio_scores)
-
-        # # motion ranks first and is worth 150 points
-        # norm_motion_scores = norm_motion_scores * (150. / np.amax(np.abs(norm_motion_scores)))
-        # # audio ranks second and is worth 100 points
-        # norm_audio_scores = norm_audio_scores * (100. / np.amax(np.abs(norm_audio_scores)))
+        avg_audio_score = np.average(norm_audio_scores)
 
         for shot in self.shots:
-            # shot.motion_score = norm_motion_scores[shot.num]
             shot.audio_score = norm_audio_scores[shot.num]
-            shot.get_shot_score()
+            shot.get_shot_score(avg_audio_score)
         if self.signals is not None:
             self.signals.report_progress.emit((
                 'Evaluating shots and calculating scores... {shot_num}/{shots} shots evaluated.'.format(
@@ -151,9 +144,8 @@ class Evaluator:
         shot_scores = dict(zip(shot_nums, scores))
         sorted_shot_scores = OrderedDict(sorted(shot_scores.items(), key=lambda item: item[1], reverse=True))
         fps = 30
-        # TODO tune this because we are getting summarized videos of >100 seconds long
-        # min of 84 seconds
-        seconds = 84
+        # min of 89 seconds
+        seconds = 89
         min_frames = fps * seconds
         num_selected_frames = 0
         frame_nums_to_write = []

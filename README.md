@@ -68,7 +68,7 @@ and get the average, using that as the ***shot's motion score***. We also keep t
 
 ### Audio
 
-For audio scoring, we simply take the amplitudes of the samples corresponding to the particular shot and take an
+For audio scoring, we simply take the amplitudes of the samples corresponding to each shot and take an
 average. Once we calculate this for all shots, we normalize the scores.
 
 ### Face Detection
@@ -78,9 +78,11 @@ shot.
 
 ## Frame Selection
 
-The scores are combined using this formula: `motion_score * audio_score * face_detection_bonus`
-where `face_detection_bonus` is 1.1 if faces are detected in the shot, and 1.0 otherwise. We then sort the shots based
-on descending scores. We also introduced two criteria to select the frames from each shot.
+The scores are combined using this formula: `motion_score * audio_boost * face_detection_bonus`
+where `audio_boost` is `1.5` if the shot's average audio amplitude is greater than the average audio amplitude of the
+entire video, and `1.0` otherwise. `face_detection_bonus` is `1.2` if faces are detected in the shot, and `1.0`
+otherwise. We then sort the shots based on descending scores. We also introduced two criteria to select the frames from
+each shot.
 
 1. A shot must have a minimum of 45 frames. Before introducing this criteria, we noticed that some shot changes are very
    abrupt. In addition, when the number of frames are low, the audience may not have time to react to the content. This
@@ -90,7 +92,7 @@ on descending scores. We also introduced two criteria to select the frames from 
    in descending order and as long as the score is in the top 70%, we will insert the frame numbers in a set. The
    selected frames begin and end from the min and max of the set.
 
-Of course, once we have at least a minimum of 85 seconds of video, we will stop selecting frames.
+Of course, once we exceed 89 seconds of video, we will stop selecting frames.
 
 ## Conclusion
 
