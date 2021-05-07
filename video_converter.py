@@ -25,8 +25,8 @@ class VideoConverter:
         self.audio_rate = audio_rate
         # sampling width of audio
         self.audio_sampwidth = audio_sampwidth
-        # init font first because it takes 8 seconds
         pygame.init()
+        # init font first because it takes 8 seconds
         self.font = pygame.font.SysFont('Sans', 18)
 
     def clear_files(self):
@@ -119,7 +119,7 @@ class VideoConverter:
         clock = pygame.time.Clock()
         pause = False
 
-        gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
+        gameDisplay = pygame.display.set_mode((display_width, display_height))
         pygame.display.set_caption('Summarized Video')
 
         x = 0

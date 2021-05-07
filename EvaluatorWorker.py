@@ -1,4 +1,4 @@
-import time
+import datetime
 
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
@@ -20,24 +20,19 @@ class EvaluatorWorker(QRunnable):
 
     @pyqtSlot()
     def run(self: 'EvaluatorWorker'):
-        total_time = 0.
-
-        start_time = time.time()
+        start = datetime.datetime.now()
         self.signals.report_progress.emit(('Detecting and segmenting shots...', 0))
         evaluator = Evaluator(self.rgbFolder, self.wavFile, self.signals)
-        end_time = time.time()
-        total_time += end_time - start_time
-
-        start_time = time.time()
         evaluator.evaluate()
-        end_time = time.time()
-        total_time += end_time - start_time
-
-        start_time = time.time()
         frame_nums_to_write = evaluator.select_frames()
-        end_time = time.time()
-        total_time += end_time - start_time
+        end = datetime.datetime.now()
 
-        self.signals.report_progress.emit(
-            ('Program ran for {time_taken} mins'.format(time_taken=round(total_time / 60., 2)), 1))
+        elapsed = end - start
+        hours, remainder = divmod(elapsed.total_seconds(), 3600)
+        total_minutes, total_seconds = divmod(remainder, 60)
+        total_seconds = '{total_seconds:02d}'.format(total_seconds=int(total_seconds))
+        total_minutes = '{total_minutes:02d}'.format(total_minutes=int(total_minutes))
+
+        self.signals.report_progress.emit(('Program ran for {total_minutes}:{total_seconds} (mm:ss)'.format(
+            total_minutes=total_minutes, total_seconds=total_seconds), 1))
         self.signals.finished_with_results.emit((frame_nums_to_write, evaluator.audio))

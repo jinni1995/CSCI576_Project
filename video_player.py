@@ -14,8 +14,8 @@ class VideoPlayer:
         self.audio_samples = audio_samples
         # fps
         self.fps = fps
-        # init font first because it takes 8 seconds
         pygame.init()
+        # init font first because it takes 8 seconds
         self.font = pygame.font.SysFont('Sans', 18)
 
     # play audio and display frames with an interval
@@ -27,8 +27,8 @@ class VideoPlayer:
         clock = pygame.time.Clock()
         pause = False
 
-        gameDisplay = pygame.display.set_mode((display_width, display_height), pygame.RESIZABLE)
-        pygame.display.set_caption('video')
+        gameDisplay = pygame.display.set_mode((display_width, display_height))
+        pygame.display.set_caption('Summarized Video')
 
         x = 0
         y = 0
@@ -58,7 +58,8 @@ class VideoPlayer:
         total_minutes = '{total_minutes:02d}'.format(total_minutes=int(total_minutes))
         minutes = 0
         seconds = 0
-        for filename in filenames:
+        while frame_num < len(filenames):
+            filename = filenames[frame_num]
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_p:
