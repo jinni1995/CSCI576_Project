@@ -88,9 +88,10 @@ each shot.
    abrupt. In addition, when the number of frames are low, the audience may not have time to react to the content. This
    ensures a smoother video.
 2. If a shot has more than 300 frames (10 seconds), it may be too long and we could miss the selection of other shots
-   that may be just as interesting. Hence, we keep track of the motion scores between frames of each shot. We sort this
-   in descending order and as long as the score is in the top 70%, we will insert the frame numbers in a set. The
-   selected frames begin and end from the min and max of the set.
+   that may be just as interesting. If a selected shot has more than 300 frames, we perform a sub-selection. This is why
+   we keep track of the motion scores between frames of each shot. We sort this in descending order and as long as the
+   score is in the top 70% or the number of frames selected is less than 300, we will insert the frame numbers in a set.
+   The selected frames begin and end from the min and max of the set.
 
 Of course, once we exceed 89 seconds of video, we will stop selecting frames.
 
