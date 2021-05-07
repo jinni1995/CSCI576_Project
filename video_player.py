@@ -14,7 +14,6 @@ class VideoPlayer:
         self.audio_samples = audio_samples
         # fps
         self.fps = fps
-        time.sleep(2)
         pygame.init()
         # init font first because it takes 8 seconds
         self.font = pygame.font.SysFont('Sans', 18)
@@ -59,7 +58,6 @@ class VideoPlayer:
         total_minutes = '{total_minutes:02d}'.format(total_minutes=int(total_minutes))
         minutes = 0
         seconds = 0
-        close = False
         while frame_num < len(filenames):
             filename = filenames[frame_num]
             for event in pygame.event.get():
@@ -75,18 +73,12 @@ class VideoPlayer:
                             start_pause = time.time()
                             if pygame.mixer.music.get_busy():
                                 pygame.mixer.music.pause()
-                elif event.type == pygame.QUIT:
-                    close = True
-                    break
                 elif event.type == pygame.VIDEORESIZE:
                     w, h = pygame.display.get_surface().get_size()
                     w = int(w / 16.) * 16
                     h = int(w / 16 * 9)
                     gameDisplay = pygame.display.set_mode((w, h), pygame.RESIZABLE)
                     resized = True
-
-            if close:
-                break
 
             if not pause:
                 if resized:

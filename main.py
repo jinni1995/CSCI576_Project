@@ -23,7 +23,7 @@ class Gui(QWidget):
         self.left = 0
         self.top = 0
         self.width = 1000
-        self.height = 480
+        self.height = 360
 
         self.jpgFolder = None
         self.rgbFolder = None
@@ -52,43 +52,16 @@ class Gui(QWidget):
         self.windowLayout = QVBoxLayout()
 
         # Options are to choose folders for video evaluation or play existing video
-        self.video_evaulation_widget = self.createChooseButtons()
-        self.play_video_widget = self.createPlayVideoButtons()
+        self.online_mode_widget = self.createOnlineModeButtons()
+        self.offline_mode_widget = self.createOfflineModeButtons()
 
-        # Add Choose buttons
-        self.windowLayout.addWidget(self.video_evaulation_widget)
-        self.windowLayout.addWidget(self.createVideoEvaluatorSection())
-        self.addPlayConvertedVideoSection()
-        self.windowLayout.addWidget(self.play_video_widget)
-        self.windowLayout.addWidget(self.createPlayVideoSection())
+        # Add buttons
+        self.windowLayout.addWidget(self.online_mode_widget)
+        self.windowLayout.addWidget(self.offline_mode_widget)
 
         # Set layout and show
         self.setLayout(self.windowLayout)
         self.show()
-
-    def createVideoEvaluatorSection(self: 'Gui') -> QGroupBox:
-        groupBox = QGroupBox('Video Evaluator')
-        groupBox.setFixedHeight(125)
-
-        layout = QVBoxLayout()
-        self.evaluatorProgressLabel = QLabel('Press the button to evaluate the video')
-        layout.addWidget(self.createButton('Evaluate Video', self.evaulate_video))
-        layout.addWidget(self.evaluator_progress_bar)
-        layout.addWidget(self.evaluatorProgressLabel)
-
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def addVideoEvaluatorSection(self: 'Gui'):
-        self.windowLayout.addWidget(self.createVideoEvaluatorSection())
-        # if self.jpgFolder is not None and self.rgbFolder is not None and self.wavFile is not None:
-        #     self.windowLayout.addWidget(self.createVideoEvaluatorSection())
-
-        # if self.play_video_widget is not None:
-        #     self.windowLayout.removeWidget(self.play_video_widget)
-        #     self.play_video_widget.deleteLater()
-        #     self.play_video_widget = None
 
     def createProgressBarPercent(self: 'Gui') -> QProgressBar:
         progress_bar = QProgressBar()
@@ -96,52 +69,68 @@ class Gui(QWidget):
         progress_bar.setMaximum(100)
         return progress_bar
 
-    def createChooseButtons(self: 'Gui') -> QGroupBox:
-        chooseButtonsGroupBox = QGroupBox("Choose your JPG, RGB, and WAV Files/Folders for video evaluation")
-        chooseButtonsGroupBox.setFixedHeight(100)
-        layout = QHBoxLayout()
+    def createOnlineModeButtons(self: 'Gui') -> QGroupBox:
+        onlineModeGroup = QGroupBox("Choose your JPG, RGB, and WAV Files/Folders for video evaluation")
+        onlineModeGroup.setFixedHeight(250)
 
+        groupLayout = QVBoxLayout()
+
+        pathLayout = QHBoxLayout()
         jpgBox = QVBoxLayout()
         self.jpgLabel = QLabel()
         jpgBox.addWidget(self.createButton('Choose JPG Folder', self.setJpgFolder))
         jpgBox.addWidget(self.jpgLabel)
-        layout.addLayout(jpgBox)
+        pathLayout.addLayout(jpgBox)
 
         rgbBox = QVBoxLayout()
         self.rgbLabel = QLabel()
         rgbBox.addWidget(self.createButton('Choose RGB Folder', self.setRgbFolder))
         rgbBox.addWidget(self.rgbLabel)
-        layout.addLayout(rgbBox)
+        pathLayout.addLayout(rgbBox)
 
         wavBox = QVBoxLayout()
         self.wavLabel = QLabel()
         wavBox.addWidget(self.createButton('Choose WAV File', self.setWavFile))
         wavBox.addWidget(self.wavLabel)
-        layout.addLayout(wavBox)
+        pathLayout.addLayout(wavBox)
+        groupLayout.addLayout(pathLayout)
 
-        chooseButtonsGroupBox.setLayout(layout)
+        evalLayout = QHBoxLayout()
+        evalBox = QVBoxLayout()
+        self.evaluatorProgressLabel = QLabel()
+        evalBox.addWidget(self.createButton('Evaluate Video', self.evaulate_video))
+        evalBox.addWidget(self.evaluator_progress_bar)
+        evalBox.addWidget(self.evaluatorProgressLabel)
+        evalLayout.addLayout(evalBox)
+        groupLayout.addLayout(evalLayout)
 
-        return chooseButtonsGroupBox
+        playLayout = QHBoxLayout()
+        playBox = QVBoxLayout()
+        self.play_converted_video_button = self.createButton('Play', self.play_converted_video)
+        playBox.addWidget(self.play_converted_video_button)
+        playLayout.addLayout(playBox)
+        groupLayout.addLayout(playLayout)
+
+        onlineModeGroup.setLayout(groupLayout)
+
+        return onlineModeGroup
 
     @pyqtSlot()
     def setJpgFolder(self: 'Gui'):
         self.jpgFolder = self.getFolderPathDialog('JPG Folder') + '/'
         self.jpgLabel.setText('/'.join(self.jpgFolder.split('/')[-5:]))
-        # self.addVideoEvaluatorSection()
 
     @pyqtSlot()
     def setRgbFolder(self: 'Gui'):
         self.rgbFolder = self.getFolderPathDialog('RGB Folder') + '/'
         self.rgbLabel.setText('/'.join(self.rgbFolder.split('/')[-5:]))
-        # self.addVideoEvaluatorSection()
 
     @pyqtSlot()
     def setWavFile(self: 'Gui'):
         self.wavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
         self.wavLabel.setText('/'.join(self.wavFile.split('/')[-4:]))
-        # self.addVideoEvaluatorSection()
 
-    def createPlayVideoButtons(self: 'Gui') -> QGroupBox:
+    def createOfflineModeButtons(self: 'Gui') -> QGroupBox:
         groupBox = QGroupBox("Or choose your JPG Folder and WAV File for Video Play")
         groupBox.setFixedHeight(100)
         layout = QHBoxLayout()
@@ -158,32 +147,15 @@ class Gui(QWidget):
         wavBox.addWidget(self.playWavLabel)
         layout.addLayout(wavBox)
 
-        groupBox.setLayout(layout)
-
-        return groupBox
-
-    def createPlayVideoSection(self: 'Gui') -> QGroupBox:
-        groupBox = QGroupBox('Play Video')
-        groupBox.setFixedHeight(100)
-
-        layout = QVBoxLayout()
+        playBox = QVBoxLayout()
         self.play_video_button = self.createButton('Play', self.play_video)
-        layout.addWidget(self.play_video_button)
+        playBox.addWidget(self.play_video_button)
+        playBox.addWidget(QLabel())
+        layout.addLayout(playBox)
 
         groupBox.setLayout(layout)
 
         return groupBox
-
-    def addPlayVideoSection(self: 'Gui'):
-        self.windowLayout.addWidget(self.createPlayVideoSection())
-        # if self.playJpgFolder is not None and self.playWavFile is not None:
-        #     self.windowLayout.addWidget(self.createPlayVideoSection())
-
-        # Remove evaluator section
-        # if self.video_evaulation_widget is not None:
-        #     self.windowLayout.removeWidget(self.video_evaulation_widget)
-        #     self.video_evaulation_widget.deleteLater()
-        #     self.video_evaulation_widget = None
 
     @pyqtSlot()
     def play_video(self: 'Gui'):
@@ -207,13 +179,11 @@ class Gui(QWidget):
     def setPlayJpgFolder(self: 'Gui'):
         self.playJpgFolder = self.getFolderPathDialog('JPG Folder') + '/'
         self.playJpgLabel.setText('/'.join(self.playJpgFolder.split('/')[-4:]))
-        # self.addPlayVideoSection()
 
     @pyqtSlot()
     def setPlayWavFile(self: 'Gui'):
         self.playWavFile = self.getFilePathDialog('WAV File', 'WAV Audio Files (*.wav)')
         self.playWavLabel.setText('/'.join(self.playWavFile.split('/')[-3:]))
-        # self.addPlayVideoSection()
 
     def createButton(self: 'Gui', label: str, callback) -> QPushButton:
         button = QPushButton(label, self)
@@ -259,19 +229,6 @@ class Gui(QWidget):
         audio = information[1]
         self.frame_nums_to_write = frame_nums_to_write
         self.audio = audio
-        # self.addPlayConvertedVideoSection()
-
-    def addPlayConvertedVideoSection(self: 'Gui') -> QGroupBox:
-        groupBox = QGroupBox('Play Converted Video')
-        groupBox.setFixedHeight(100)
-
-        layout = QVBoxLayout()
-        self.play_converted_video_button = self.createButton('Play', self.play_converted_video)
-        layout.addWidget(self.play_converted_video_button)
-
-        groupBox.setLayout(layout)
-
-        self.windowLayout.addWidget(groupBox)
 
     def play_converted_video(self: 'Gui'):
         self.converter.play()
