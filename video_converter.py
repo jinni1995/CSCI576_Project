@@ -25,8 +25,9 @@ class VideoConverter:
         self.audio_rate = audio_rate
         # sampling width of audio
         self.audio_sampwidth = audio_sampwidth
-        # init font first because it takes 8 seconds
+        time.sleep(2)
         pygame.init()
+        # init font first because it takes 8 seconds
         self.font = pygame.font.SysFont('Sans', 18)
 
     def clear_files(self):
@@ -143,6 +144,7 @@ class VideoConverter:
         total_minutes = '{total_minutes:02d}'.format(total_minutes=int(total_minutes))
         minutes = 0
         seconds = 0
+        close = False
         while frame_num < len(self.selections):
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -157,6 +159,9 @@ class VideoConverter:
                             start_pause = time.time()
                             if pygame.mixer.music.get_busy():
                                 pygame.mixer.music.pause()
+                elif event.type == pygame.QUIT:
+                    close = True
+                    break
                 elif event.type == pygame.VIDEORESIZE:
                     w, h = pygame.display.get_surface().get_size()
                     w = int(w / 16.) * 16
@@ -164,6 +169,9 @@ class VideoConverter:
                     gameDisplay = pygame.display.set_mode((w, h), pygame.RESIZABLE)
                     resized = True
 
+            if close:
+                break
+                
             if not pause:
                 if resized:
                     img = pygame.image.load(folder + self.selections[frame_num])
